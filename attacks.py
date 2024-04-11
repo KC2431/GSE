@@ -1599,8 +1599,8 @@ class SAAPF(Attack):
         """
         target_label_tensor=target_label.clone()
 
-        G = torch.ones_like(x, dtype=torch.float32).cuda()
-        epsilon = torch.zeros_like(x, dtype=torch.float32).cuda()
+        G = torch.ones_like(x, dtype=torch.float32, device=self.device)
+        epsilon = torch.zeros_like(x, dtype=torch.float32, device=self.device)
 
         rho1 = 5e-3
         rho2 = 5e-3
@@ -1630,12 +1630,6 @@ class SAAPF(Attack):
         else:
             results_status=False
         
-
-        print(target_label)
-        print(torch.argmax(self.model(x + epsilon * G),dim=1))
-        
-          
-
         results = {
             'status': results_status,
             'G' : G.detach(),
@@ -1688,8 +1682,6 @@ class SAAPF(Attack):
             if cur_iter % 50 == 0:
                 cur_step = max(cur_step*0.9, 0.001) 
 
-        print(loss)
-        print(f"eps max is {epsilon.max()}")
         return epsilon, cur_step
     
     def update_G(self, x, target_label, epsilon, G, init_params, B, noise_Weight, out_iter):
@@ -1784,9 +1776,7 @@ class SAAPF(Attack):
 
             cur_iter = cur_iter + 1
 
-        print(loss)
         res_param = {'cur_step_g': cur_step, 'cur_rho1': cur_rho1,'cur_rho2': cur_rho2, 'cur_rho3': cur_rho3,'cur_rho4': cur_rho4}
-        print(f"g max is {G.max()}")
         return G, res_param
 
     
