@@ -1555,7 +1555,7 @@ class SAAPF(Attack):
             B = torch.from_numpy(B).float().to(self.device)     
             B_array.append(B)   
 
-        noise_Weight = self.compute_sensitive(x)
+        noise_Weight = self.compute_sensitive(x, weight_type='gradient')
         G, epsilon = self.train_adptive(x, y, B_array, noise_Weight)
         return epsilon * G
 
@@ -1806,17 +1806,20 @@ class SAAPF(Attack):
         else:
             if weight_type == 'gradient':
                 from scipy.ndimage import filters
-                im = x.cpu().numpy().squeeze(axis=0).transpose((1,2,0))                            #229,229,3
-                im_Prewitt_x = np.zeros(im.shape ,dtype='float32')
-                im_Prewitt_y = np.zeros(im.shape ,dtype='float32')
-                im_Prewitt_xy = np.zeros(im.shape ,dtype='float32')
-        
-                filters.prewitt(im, 1, im_Prewitt_x)
-                filters.prewitt(im, 0, im_Prewitt_y)
-                im_Prewitt_xy = np.sqrt(im_Prewitt_x ** 2 + im_Prewitt_y ** 2) 
-                
-                im_Prewitt_xy = im_Prewitt_xy.transpose((2,0,1))[np.newaxis,...]                       #1,3,299,299
-                weight = torch.from_numpy(im_Prewitt_xy).cuda().float()
+
+                weight = torch.zeros_like(x)
+                for image_index in range(x.shape[0]):
+                    im = x[image_index].permute(1,2,0)                            #229,229,3
+                    im_Prewitt_x = torch.zeros(im.shape ,dtype=torch.float32, device=self.device)
+                    im_Prewitt_y = torch.zeros(im.shape ,dtype=torch.float32, device=self.device)
+                    im_Prewitt_xy = torch.zeros(im.shape ,dtype=torch.float32, device=self.device)
+            
+                    filters.prewitt(im.cpu().numpy(), 1, im_Prewitt_x.cpu().numpy())
+                    filters.prewitt(im.cpu().numpy(), 0, im_Prewitt_y.cpu().numpy())
+                    im_Prewitt_xy = torch.sqrt(im_Prewitt_x ** 2 + im_Prewitt_y ** 2) 
+                    
+                    im_Prewitt_xy = im_Prewitt_xy.permute(2,0,1)
+                    weight[image_index] = im_Prewitt_xy.clone().float()
         
             else:
                 for i in range(h):
@@ -1842,6 +1845,6 @@ class SAAPF(Attack):
                                 
             weight = 1.0 / (weight + 1e-4) 
             for k in range(c):
-                weight[0, k, :, :] = (weight[0, k, :, :] - torch.min(weight[0, k, :, :])) / (torch.max(weight[0, k, :, :]) - torch.min(weight[0, k, :, :]))
+                weight[:, k, :, :] = (weight[:, k, :, :] - torch.min(weight[:, k, :, :])) / (torch.max(weight[:, k, :, :]) - torch.min(weight[:, k, :, :]))
             
             return weight
