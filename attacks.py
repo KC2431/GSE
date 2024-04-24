@@ -1496,7 +1496,6 @@ class SAAPF(Attack):
         super().__init__(model, targeted, img_range)
 
         self.categories = categories
-        self.device = device
         self.init_lambda1 = init_lambda_1
         self.k = k
         self.lambda1 = lambda_1
